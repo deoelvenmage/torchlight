@@ -1,25 +1,17 @@
 # Imports
-import math
 import arcade
 import random
-
-from attr import has
 
 # Constants
 SPRITE_SIZE = 16
 MAZE_SIZE = 20
 SCALING = 2.0 # I predict unpredictable behavior if this does not evenly divide both sprite and maze size
-SCALING_INT = int(SCALING)
+SCALING_INT = int(SCALING) 
 SCREEN_WIDTH = SPRITE_SIZE * MAZE_SIZE * SCALING_INT
 SCREEN_HEIGHT = SPRITE_SIZE * MAZE_SIZE * SCALING_INT
 SCREEN_TITLE = "Torchlight"
 
 class Torchlight(arcade.Window):
-    """Space Shooter side scroller game
-    Player starts on the top left, must find exit
-    Player can move anywhere, but not off screen
-    Collisions end the game
-    """
 
     def __init__(self, width, height, title):
         """
@@ -35,7 +27,7 @@ class Torchlight(arcade.Window):
         self.physics_engine = None
         self.paused = False
     
-    def setup(self): # TODO big setup in here; call generateMaze with MazeSize. Or just start it right now. Nah, make generator.
+    def setup(self):
         """
         Get the game ready to play
         """
@@ -44,7 +36,7 @@ class Torchlight(arcade.Window):
         arcade.set_background_color((219, 168, 140))
 
         # Set up the player
-        self.player = arcade.Sprite("./images/skull_v2_1.png", SCALING) #TODO Set hitbox here to be 16x16; will center the sprite?
+        self.player = arcade.Sprite("./images/skull_v2_1.png", SCALING) #TODO Set hitbox here to be 16x16; will center the sprite and fix shunting?
         self.player.top = self.height
         self.player.left = 0
         self.all_sprites.append(self.player)
@@ -58,9 +50,11 @@ class Torchlight(arcade.Window):
         def create_maze():
             """
             Credit for maze generation technique goes to github.com/ChickenSlayer3000/Random-Maze-Generator
-            Modified some variables for readability; others I decided not to mess with
+            Had to modify it to work with my own stuff, and I also changed some variables for readability; 
+            others I chose not to mess with.
             For deciphering, I understand scr and scc to be StartingCellRow and StartingCellColumn;
-            similar with Current and End.           
+            similar with Current and End.
+            I hope to fully make my own at some point instead of using a modified version of this.           
             """
 
             ms = MAZE_SIZE # rows and columns
@@ -70,7 +64,7 @@ class Torchlight(arcade.Window):
 
             map = [['Blocked' for _ in range(ms)]for _ in range(ms)]
 
-            def create(): # TODO changing this for now
+            def create():
                 for row in range(ms):
                     for col in range(ms):
                         if map[row][col] == 'Open':
@@ -83,14 +77,9 @@ class Torchlight(arcade.Window):
                             y = row * SPRITE_SIZE * SCALING_INT
 
                             sprite.left = x
-                            sprite.bottom = y #was top; does this fix the upper funny? Yes
+                            sprite.bottom = y
                             self.wall_list.append(sprite)
                             self.all_sprites.append(sprite)
-
-            """Idea for a fixed create function. "Build" might be a better name too; wait hang on it might be working"""
-            # def create():
-            #     for item in revisited_cells:
-
 
             def check_neighbours(ccr, ccc):
                 neighbours = [[ccr, ccc-1, ccr-1, ccc-2, ccr, ccc-2, ccr+1, ccc-2, ccr-1, ccc-1, ccr+1, ccc-1], #left
@@ -106,17 +95,17 @@ class Torchlight(arcade.Window):
                             visitable_neighbours.append(i[0:2])
                 return visitable_neighbours
 
-            #StartingPoint
-
+            # StartingPoint
             scr = random.randint(0, ms-1)
             scc = random.randint(0, ms-1)
 
-            # Change player position
+            # Update starting player position
             self.player.left = scc * SPRITE_SIZE * SCALING_INT
-            self.player.bottom = scr * SPRITE_SIZE * SCALING_INT #changed like wall
+            self.player.bottom = scr * SPRITE_SIZE * SCALING_INT
 
             ccr, ccc = scr, scc
 
+            # This is the most confusing part of the technique
             map[ccr][ccc] = 'Open'
             finished = False
             while not finished:
@@ -148,10 +137,11 @@ class Torchlight(arcade.Window):
 
             # change end tile position
             self.end_tile.left = ecc * SPRITE_SIZE * SCALING_INT
-            self.end_tile.bottom = ecr * SPRITE_SIZE * SCALING_INT #changed like wall
+            self.end_tile.bottom = ecr * SPRITE_SIZE * SCALING_INT
         
         create_maze()
 
+        # Make fog same as the maze
         def create_fog():
             for row in range(MAZE_SIZE):
                     for col in range(MAZE_SIZE):
@@ -168,43 +158,38 @@ class Torchlight(arcade.Window):
         create_fog()
 
         self.physics_engine = arcade.PhysicsEngineSimple(self.player, self.wall_list) 
-        #TODO This does some funny shunting now. Maybe consider fixing after I make the sprite hitbox right and change the step size from half.
+        #TODO This does some funny shunting. Maybe consider fixing sprite hitbox? FOr now, change the step size to half.
     
-    #Make this call update (turn_update?) with a parameter of 'command'; we'll use this over on_update
-    def on_key_press(self, symbol, modifiers): 
-        """Handle user keyboard input
-        Q: Quit the game
-        P: Pause/Unpause the game
-        I/J/K/L: Move Up, Left, Down, Right
-        Arrows: Move Up, Left, Down, Right
-
-        Arguments:
-            symbol {int} -- Which key was pressed
-            modifiers {int} -- Which modifiers were pressed
-        """
+    #Make this call update (turn_update?) with a parameter of 'command'? Only if we want it to be fully turn-based.
+    def on_key_press(self, symbol, modifier): #modifier is Shift, ctrl, alt, etc; not used but must be there to work
         if symbol == arcade.key.Q:
-            # Quit immediately
+            # Quit
             arcade.close_window()
+
+        # Pausing does nothing, essentially; however, this will remain in so that we can use it later if we want
         if symbol == arcade.key.P:
             self.paused = not self.paused
 
         # top and right chosen because positive in those directions is positive x and y in arcade's positioning
         if symbol == arcade.key.W or symbol == arcade.key.UP:
-            self.player.top += SPRITE_SIZE * SCALING_INT // 2 # Will always come out because sprite size will always be a 2-power
+            self.player.top += SPRITE_SIZE * SCALING_INT // 2 
         if symbol == arcade.key.S or symbol == arcade.key.DOWN:
-            self.player.top -= SPRITE_SIZE * SCALING_INT // 2 # However, this is just a temorary fix for the shunting problem cause by sprite being top left
+            self.player.top -= SPRITE_SIZE * SCALING_INT // 2 
         if symbol == arcade.key.A or symbol == arcade.key.LEFT:
-            self.player.right -= SPRITE_SIZE * SCALING_INT // 2 # Hitbox is smaller than 16px; try centering it first.
+            self.player.right -= SPRITE_SIZE * SCALING_INT // 2
         if symbol == arcade.key.D or symbol == arcade.key.RIGHT:
             self.player.right += SPRITE_SIZE * SCALING_INT // 2
+        # //2 thing will always come out because sprite size will always be a 2-power
+        # However, this is just a temorary fix for the shunting problem cause by sprite being top left, since the
+        # hitbox is smaller than 16px; try centering it first or forcing it up to 16px?
 
     def on_update(self, delta_time: float):
-        """Update the positions and statuses of all game objects
+        """
+        Update the positions and statuses of all game objects
         If paused, do nothing
     
         Arguments:
-            delta_time {float} -- Time since the last update
-        """
+            delta_time {float} -- Time since the last update.""" # Currently unused, however, will leave it in in case we want it later
     
         # If paused, don't update anything
         if self.paused:
@@ -215,8 +200,7 @@ class Torchlight(arcade.Window):
             arcade.close_window() 
     
         # Update everything
-        self.physics_engine.update() # Easiest thing of my life what the heck
-        # self.all_sprites.update() not needed since we're using a physics engine now
+        self.physics_engine.update() # Easiest thing of my life what the heck; self.all_sprites.update() not needed since we're using a physics engine now
     
         # Keep the player on screen
         if self.player.top > self.height:
@@ -228,6 +212,7 @@ class Torchlight(arcade.Window):
         if self.player.left < 0:
             self.player.left = 0
         
+        # State of the art dynamic lighting
         for square in self.fog_list:
             if ((abs(square.center_x - self.player.center_x) + abs(square.center_y - self.player.center_y)) <= 3 * SPRITE_SIZE * SCALING) and (arcade.has_line_of_sight(self.player.position, square.position, self.wall_list)):
                 square.alpha = 0
@@ -235,10 +220,11 @@ class Torchlight(arcade.Window):
                 square.alpha = 255
     
     def on_draw(self):
-        """Draw all game objects
+        """
+        Draw all game objects
         """
         arcade.start_render()
-        self.all_sprites.draw() #Maybe here put the check if LoS && difference between sprite center and player center is <= SpriteSize*Scalaing*3 (3 for 3 squares)
+        self.all_sprites.draw()
             
 def main():
     """ Main function """
